@@ -1,31 +1,35 @@
-
 import SubcategoryCard from '@/app/_components/SubCategoryCard/SubCategoryCard';
-import { log } from 'console';
-import { ArrowLeft, ImageIcon } from 'lucide-react'
-import Link from 'next/link'
-import React from 'react'
+import { ArrowLeft, ImageIcon } from 'lucide-react';
+import Link from 'next/link';
+import React from 'react';
 
-export default async function CategoryPage(props) {
+// 1. تعريف نوع الـ Props عشان TypeScript ميزعلش
+interface CategoryPageProps {
+    params: Promise<{ id: string }>;
+}
 
-    const { id } = await props.params;
+export default async function CategoryPage({ params }: CategoryPageProps) {
+    // 2. فك الـ Promise بتاع الـ params بالطريقة الصح
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
+
+    // دالة جلب تفاصيل القسم الرئيسي
     async function getCategoryDetails() {
-
         const res = await fetch(`https://ecommerce.routemisr.com/api/v1/categories/${id}`);
         const data = await res.json();
         return data.data;
-
     }
-    async function subCategories() {
 
-        const res = await fetch(`https://ecommerce.routemisr.com/api/v1/subcategories`);
+    // دالة جلب الأقسام الفرعية
+    async function subCategories() {
+        // 3. التعديل المنطقي: نجيب الأقسام الفرعية بتاعة القسم ده بس مش كل الأقسام!
+        const res = await fetch(`https://ecommerce.routemisr.com/api/v1/categories/${id}/subcategories`);
         const data = await res.json();
         return data.data;
     }
 
-    const categoryDetails = await getCategoryDetails()
-    const subCategoriesData = await subCategories()
-
-    console.log(subCategoriesData);
+    const categoryDetails = await getCategoryDetails();
+    const subCategoriesData = await subCategories();
 
     return (
         <>
@@ -39,14 +43,14 @@ export default async function CategoryPage(props) {
                         <span className="text-white/60">/</span>
                         <Link href="/category" className="hover:text-white transition-colors">Categories</Link>
                         <span className="text-white/60">/</span>
-                        <span className="text-white font-medium">{categoryDetails.name}</span>
+                        <span className="text-white font-medium">{categoryDetails?.name}</span>
                     </nav>
 
                     {/* Header Content */}
                     <div className="flex items-center gap-5">
                         {/* Dynamic Image Box */}
                         <div className="flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 bg-white/20 backdrop-blur-sm rounded-2xl shrink-0 shadow-sm overflow-hidden p-2">
-                            {categoryDetails.image ? (
+                            {categoryDetails?.image ? (
                                 <img
                                     src={categoryDetails.image}
                                     alt={categoryDetails.name}
@@ -60,7 +64,7 @@ export default async function CategoryPage(props) {
                         {/* Dynamic Title */}
                         <div className="flex flex-col">
                             <h1 className="text-3xl sm:text-4xl font-bold text-white tracking-tight mb-1 sm:mb-2">
-                                {categoryDetails.name}
+                                {categoryDetails?.name}
                             </h1>
                             <p className="text-white/90 text-sm sm:text-base font-medium">
                                 Choose a subcategory to browse products
@@ -72,26 +76,28 @@ export default async function CategoryPage(props) {
 
             {/* --- SUBCATEGORIES GRID --- */}
             <div className="container mx-auto px-4 py-8">
-                <Link href="/category" className="text-lg font-medium text-gray-600 mb-2 hover:text-green-500 transition-colors flex items-center gap-1">
-                    <ArrowLeft></ArrowLeft>   Back to Categories
+                <Link href="/category" className="text-lg font-medium text-gray-600 mb-2 hover:text-green-500 transition-colors flex items-center gap-1 w-fit">
+                    <ArrowLeft size={20} /> Back to Categories
                 </Link>
-                <h2 className="text-2xl font-semibold text-gray-800 mb-6">40 Subcategories in {categoryDetails.name}</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-
-                    {
-                        subCategoriesData.map((subcat: any) => {
-                            return (
-                                <Link href={`/subcategory/${subcat._id}`} key={subcat._id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                                    <SubcategoryCard title={subcat.name} />
-                                </Link>
-                            );
-
-                        }
-                        )
-
-                    }
-
-                </div>
+                
+                {/* 4. خلينا الرقم يتقري من طول الـ Array عشان يبقى حقيقي */}
+                <h2 className="text-2xl font-semibold text-gray-800 mb-6 mt-4">
+                    {subCategoriesData?.length || 0} Subcategories in {categoryDetails?.name}
+                </h2>
+                
+                {subCategoriesData && subCategoriesData.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {subCategoriesData.map((subcat: any) => (
+                            <Link href={`/subcategory/${subcat._id}`} key={subcat._id} className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
+                                <SubcategoryCard title={subcat.name} />
+                            </Link>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-xl">
+                        No subcategories found for this category yet.
+                    </div>
+                )}
             </div>
         </>
     )
